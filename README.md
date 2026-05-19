@@ -1,8 +1,14 @@
-# 🛢️ Volve Field — Oil Production Prediction (Databricks Pipeline)
+# 🛢️ Volve Oil Field — Production Prediction Pipeline (Databricks)
 
-End-to-end Data Science pipeline that ingests real production data from the **Volve oil field**
-(North Sea, operated by Equinor 2008–2016) and trains a machine learning model to predict
-daily oil production using Databricks-native features.
+End-to-end production-prediction pipeline built on **Databricks Free Edition (Serverless)** using
+the **Volve dataset** — Equinor's 2018 public release of a real North Sea oil field.
+Ingests 15K daily production records via `kagglehub`, transforms with PySpark, persists as
+**Delta tables in Unity Catalog**, and trains a **RandomForest regressor** with log-transformed
+target (right-skew handling). Tracks three model iterations with **MLflow autolog**, comparing
+random-shuffle vs temporal validation splits to surface concept drift in late-life reservoir
+behavior.
+
+**Stack**: Databricks Serverless · PySpark on Spark Connect · Delta Lake · MLflow · Unity Catalog · scikit-learn
 
 ## 🧪 Model iteration story — the discovery process
 
