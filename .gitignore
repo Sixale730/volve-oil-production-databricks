@@ -1,0 +1,78 @@
+# ============================================================
+# Secrets - NEVER commit credentials
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*kaggle.json
+*databricks*token*
+.databrickscfg
+
+# ============================================================
+# Datasets - too big and licensed separately
+# ============================================================
+data/
+datasets/
+*.xlsx
+*.csv
+*.parquet
+!notebooks/sample_data/*.csv
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+env/
+.env/
+
+# ============================================================
+# Jupyter / Databricks
+# ============================================================
+.ipynb_checkpoints/
+*.dbc
+*-checkpoint.ipynb
+
+# Databricks workspace exports
+databricks_workspace_export/
+
+# ============================================================
+# MLflow
+# ============================================================
+mlruns/
+mlartifacts/
+
+# ============================================================
+# IDE
+# ============================================================
+.idea/
+.vscode/
+!.vscode/settings.json.example
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# Logs and temp
+# ============================================================
+*.log
+logs/
+tmp/
+temp/

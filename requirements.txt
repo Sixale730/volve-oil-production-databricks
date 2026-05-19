@@ -1,0 +1,17 @@
+# Optional: for local development outside Databricks
+# (Databricks Serverless already includes pyspark + pandas + scikit-learn + mlflow)
+
+# Data acquisition
+kagglehub>=0.3.0
+openpyxl>=3.1.0
+
+# Local notebook viewing
+jupyter>=1.0.0
+jupytext>=1.16.0
+
+# Optional: Databricks SDK for API/automation tasks
+databricks-sdk>=0.30.0
+
+# Development tools
+ruff>=0.6.0
+mypy>=1.10.0
