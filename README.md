@@ -20,16 +20,35 @@ the project — more important than the final R² number.
 |---------|-------|---------|------------------|
 | **v1** | Random 80/20 split + engineered ratio features (`water_cut_ratio`, `gas_oil_ratio`) | **0.990** | Suspiciously high R². Initially diagnosed as feature-level target leakage. |
 | **v2** | Random 80/20 split, removed leak-suspect features | **0.990** | R² unchanged → the engineered features were NOT the primary leak. Indicates the issue is elsewhere. |
-| **v3** | **Temporal split** (first 80% of dates → train, last 20% → test), same features as v2 | **−2.830** | Honest baseline. The random split was hiding **concept drift** — the Volve reservoir's production regime changed dramatically as the field approached end-of-life (2015-2016). The model trained on 2008-2015 normal-operation patterns has no signal for late-life decline. |
+| **v3** | **Temporal split** (first 80% of dates → train, last 20% → test), same features as v2 | **−2.830** | Honest baseline. The random split was masking the model's true inability to extrapolate — when forced to predict future days from past-only training data, performance collapses. |
 
 ### What v3 teaches
 
 The negative R² is not a failure — it's the **first realistic estimate** of how this
-model would generalize to genuinely future data. The relationship between
-operational features (pressure, choke, ON_STREAM_HRS) and oil production is
-**non-stationary**: as the reservoir depletes, the same pressure yields less oil
-because there's less driving force. A model that doesn't account for cumulative
-depletion will fail in late-life.
+model would generalize to genuinely future data. With random shuffle, the model was
+**interpolating between known days** of the same well, not predicting. Temporal split
+forces extrapolation, which is the actual production-time task.
+
+### Hypothesis: concept drift (not formally verified in this iteration)
+
+A reasonable interpretation of the R² collapse is **concept drift**: train (2008-08 to
+2015-08) covers Volve's normal-operation phase, while test (2015-08 to 2016-09) covers
+the field's end-of-life decline (Volve shut down late 2016). The relationship between
+operational features and oil production is plausibly **non-stationary** — as the
+reservoir depletes, the same pressure yields less oil because there's less driving force.
+
+**However, this is a hypothesis based on domain knowledge, not a formally verified
+finding in this notebook.** What was actually observed: (a) R² dropped from 0.990 to
+−2.830 when switching from random to temporal split; (b) the train and test periods
+correspond to operationally distinct phases of the field. A rigorous verification of
+concept drift would require:
+
+- KS-tests per feature comparing train vs test distributions (covariate shift detection)
+- Bucketed temporal error analysis (does error concentrate in late periods?)
+- Comparing feature importances of an early-data model vs a late-data model
+- Inspecting prediction-vs-actual residual patterns by date
+
+These are listed in the [Production-grade next steps](#production-grade-next-steps-v4) below.
 
 ### Per-sample error analysis
 
@@ -44,28 +63,44 @@ than the aggregate R² suggests:
 | #4 | 526.8 | 528.0 | 0.2% |
 | #5 | 1274.8 | 1272.7 | 0.2% |
 
-RandomForest predicts within **0.0–0.7% error** on samples whose feature values
-fall within the training distribution. The aggregate **R² = −2.83** comes from
-**other test-set samples** where the model extrapolates poorly into the
-late-life decline regime that wasn't represented in training data. This is the
-expected behavior of a model without explicit decline-curve features — it does
-well in the interpolation zone, fails in the extrapolation zone.
+RandomForest predicts within **0.0–0.7% error** on the 5 inspected samples (whose
+feature values appear to fall within the training distribution). The aggregate
+**R² = −2.83**, however, comes from **other test-set samples** where the model
+extrapolates poorly. This pattern — accuracy within distribution + failure outside —
+is consistent with the lack of regime-specific features (no decline-curve nor
+cumulative-production features in v3), though a full residual analysis is not done
+here.
 
 **Takeaway**: model evaluation in time-series ML is not just about averaged
-metrics. Per-sample analysis reveals whether failures are concentrated in a
-specific regime (here: late-life) or scattered throughout the test set. Only
-the former can be fixed by adding regime-specific features.
+metrics. Per-sample residual analysis is needed to determine whether failures are
+concentrated in a specific regime or scattered throughout the test set — only the
+former can be fixed by adding regime-specific features. This v3 inspection is
+suggestive, not conclusive.
 
 ### Production-grade next steps (v4+)
 
+**Verification work (before claiming concept drift)**:
+- **KS-test per feature** comparing train (2008-2015) vs test (2015-2016) distributions
+  to confirm covariate shift
+- **Bucketed temporal error analysis**: split test set by quarter and graph RMSE per
+  bucket to see if error is concentrated in late-life dates
+- **Compare feature importances** of a model trained on the early half vs the late
+  half — if rank order shifts, that quantifies regime change
+- **Residual scatter plots** vs date to surface systematic vs random error patterns
+
+**Modeling improvements**:
 - **Add lag features**: `oil_yesterday`, `oil_7day_avg`, `cumulative_oil_per_well`.
   These capture trajectory information that the current point-in-time features miss.
 - **Per-well models**: each Volve well has distinct geology and decline behavior.
   Pooling all wells in one model may average away well-specific dynamics.
 - **Decline-curve features**: incorporate Arps decline parameters (`q_initial`,
   `decline_rate`) as features rather than letting the model rediscover them.
-- **Concept drift monitoring**: deploy with `Lakehouse Monitoring` to detect when
-  predictions degrade as field conditions change.
+
+**Production deployment**:
+- **Drift monitoring** with `Lakehouse Monitoring` to detect when predictions degrade
+  as field conditions change in production
+- **Per-segment alerting**: KS p-value threshold per feature, with notification when
+  distributions shift significantly
 
 ## 🎯 What this project demonstrates
 
